@@ -1,18 +1,37 @@
+'use client';
+
+import { useState } from 'react';
+import { Prompt } from '@/lib/types';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import PromptList from '@/components/PromptList';
+
 export default function HomePage() {
+  const [prompts, setPrompts] = useLocalStorage<Prompt[]>('opale-prompts', []);
+  const [selectedPrompt, setSelectedPrompt] = useState<Prompt | null>(null);
+  const [isEditing, setIsEditing] = useState<Prompt | null>(null);
+
   return (
     <div className="flex h-screen bg-gray-50 text-gray-800">
       <aside className="w-1/3 max-w-sm border-r border-gray-200 p-4">
-        <header className="mb-4">
+         <header className="mb-4">
           <h1 className="text-xl font-semibold">Opale Prompts</h1>
           <p className="text-sm text-gray-500">
             Manage and select your AI prompts.
           </p>
         </header>
-        <div className="flex justify-between">
-            <button className="w-full rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+         <div className="flex justify-between">
+             <button
+                onClick={() => setIsEditing({ id: '', icon: '💡', title: '', version: '1.0', prompt: '', mode: 'replace_all' })}
+                className="w-full rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+             >
                 Add New Prompt
             </button>
         </div>
+        <PromptList
+          prompts={prompts}
+          onSelectPrompt={setSelectedPrompt}
+          onEdit={setIsEditing}
+        />
       </aside>
 
       <main className="flex-1 p-6">
