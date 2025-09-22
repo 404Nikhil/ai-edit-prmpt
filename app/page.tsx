@@ -68,15 +68,16 @@ export default function HomePage() {
       if (promptToSave.id) {
         setPrompts(prompts.map(p => (p.id === promptToSave.id ? promptToSave : p)));
       } else {
+        // Create a new prompt with a unique ID
         setPrompts([...prompts, { ...promptToSave, id: crypto.randomUUID() }]);
       }
-      setEditingPrompt(null);
+      setEditingPrompt(null); // Close the form after saving
     };
     
     const handleDeletePrompt = (id: string) => {
       if (window.confirm('Are you sure you want to delete this prompt?')) {
         setPrompts(prompts.filter(p => p.id !== id));
-        setEditingPrompt(null); 
+        setEditingPrompt(null); // Close the form after deleting
       }
     };
     return (
