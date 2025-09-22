@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build:extension": "rm -rf dist && npm run build && mkdir -p dist && cp -r out/* dist/ && cp -r extension/* dist/ && node scripts/post-build.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

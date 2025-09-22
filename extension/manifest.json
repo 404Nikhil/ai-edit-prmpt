@@ -1,0 +1,32 @@
+{
+    "manifest_version": 3,
+    "name": "AI Prompt Extension",
+    "version": "1.0",
+    "description": "Use your custom AI prompts on any website.",
+    "permissions": ["storage", "activeTab", "scripting"],
+    "host_permissions": ["<all_urls>"],
+    "action": {
+      "default_popup": "popup.html"
+    },
+    "background": {
+      "service_worker": "background.js"
+    },
+    "content_scripts": [
+      {
+        "matches": ["<all_urls>"],
+        "js": ["content.js"]
+      }
+    ],
+    "commands": {
+      "toggle_app": {
+        "suggested_key": { "default": "Ctrl+Shift+L" },
+        "description": "Toggle the AI Prompt App"
+      }
+    },
+    "web_accessible_resources": [
+      {
+        "resources": ["index.html", "_next/*"],
+        "matches": ["<all_urls>"]
+      }
+    ]
+  }

@@ -28,42 +28,32 @@ export default function HomePage() {
     }, []);
 
     const handlePromptSelect = async (prompt: Prompt) => {
-        setPaletteOpen(false);
-        setIsLoading(true);
-
-        const { start, end } = selectionRef.current;
-        const hasSelection = end > start;
-
-        const textToSend = hasSelection ? mainText.substring(start, end) : mainText;
-
-        if (!textToSend) {
-            alert("Please type or select some text to transform.");
-            setIsLoading(false);
-            return;
-        }
-
-        try {
-            const response = await fetch('/api/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ system: prompt.prompt, user: textToSend }),
-            });
-
-            if (!response.ok) throw new Error((await response.json()).error || 'API Error');
-
-            const data = await response.json();
-
-            const before = mainText.substring(0, hasSelection ? start : 0);
-            const after = mainText.substring(hasSelection ? end : mainText.length);
-            setMainText(before + data.text + after);
-
-        } catch (error: any) {
-            console.error(error);
-            alert(`Failed to generate text: ${error.message}`);
-        } finally {
-            setIsLoading(false);
-        }
+      // (content.js)
+      setPaletteOpen(false);
+      setIsLoading(true);
+    
+      const textToSend = mainText; // The app now only works on its own text area
+    
+      try {
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ system: prompt.prompt, user: textToSend }),
+        });
+        if (!response.ok) throw new Error('API Error');
+    
+        const data = await response.json();
+    
+        //  the generated text to the content script
+        window.parent.postMessage({ type: 'INSERT_TEXT', text: data.text }, '*');
+    
+      } catch (error) {
+        alert('Failed to generate text.');
+      } finally {
+        setIsLoading(false);
+      }
     };
+    
 
     const handleSelectionChange = () => {
         if (textAreaRef.current) {
@@ -74,9 +64,21 @@ export default function HomePage() {
         }
     };
 
-    const handleSavePrompt = (promptToSave: Prompt) => { /* ... same as before ... */ };
-    const handleDeletePrompt = (id: string) => { /* ... same as before ... */ };
-
+    const handleSavePrompt = (promptToSave: Prompt) => {
+      if (promptToSave.id) {
+        setPrompts(prompts.map(p => (p.id === promptToSave.id ? promptToSave : p)));
+      } else {
+        setPrompts([...prompts, { ...promptToSave, id: crypto.randomUUID() }]);
+      }
+      setEditingPrompt(null);
+    };
+    
+    const handleDeletePrompt = (id: string) => {
+      if (window.confirm('Are you sure you want to delete this prompt?')) {
+        setPrompts(prompts.filter(p => p.id !== id));
+        setEditingPrompt(null); 
+      }
+    };
     return (
         <div className="flex h-screen bg-gray-50 text-gray-800">
             <aside className="w-1/3 max-w-sm border-r border-gray-200 p-4 flex flex-col">
