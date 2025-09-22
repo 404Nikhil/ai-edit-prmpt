@@ -13,6 +13,13 @@ export default function HomePage() {
     const [isPaletteOpen, setPaletteOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+      setIsClient(true);
+    }, []);
+    // --------------------------------
+
     const textAreaRef = useRef<HTMLTextAreaElement>(null);
     const selectionRef = useRef({ start: 0, end: 0 });
 
@@ -28,32 +35,39 @@ export default function HomePage() {
     }, []);
 
     const handlePromptSelect = async (prompt: Prompt) => {
-      // (content.js)
-      setPaletteOpen(false);
-      setIsLoading(true);
-    
-      const textToSend = mainText; // The app now only works on its own text area
-    
-      try {
-        const response = await fetch('/api/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ system: prompt.prompt, user: textToSend }),
-        });
-        if (!response.ok) throw new Error('API Error');
-    
-        const data = await response.json();
-    
-        //  the generated text to the content script
-        window.parent.postMessage({ type: 'INSERT_TEXT', text: data.text }, '*');
-    
-      } catch (error) {
-        alert('Failed to generate text.');
-      } finally {
-        setIsLoading(false);
-      }
+        setPaletteOpen(false);
+        setIsLoading(true);
+
+        const { start, end } = selectionRef.current;
+        const hasSelection = end > start;
+        const textToSend = hasSelection ? mainText.substring(start, end) : mainText;
+
+        if (!textToSend) {
+            alert("Please type or select some text to transform.");
+            setIsLoading(false);
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ system: prompt.prompt, user: textToSend }),
+            });
+
+            if (!response.ok) throw new Error((await response.json()).error || 'API Error');
+            const data = await response.json();
+
+            window.parent.postMessage({ type: 'INSERT_TEXT', text: data.text }, '*');
+
+          } catch (error: unknown) {
+            console.error(error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            alert(`Failed to generate text: ${errorMessage}`);
+        } finally {
+            setIsLoading(false);
+        }
     };
-    
 
     const handleSelectionChange = () => {
         if (textAreaRef.current) {
@@ -65,21 +79,21 @@ export default function HomePage() {
     };
 
     const handleSavePrompt = (promptToSave: Prompt) => {
-      if (promptToSave.id) {
-        setPrompts(prompts.map(p => (p.id === promptToSave.id ? promptToSave : p)));
-      } else {
-        // Create a new prompt with a unique ID
-        setPrompts([...prompts, { ...promptToSave, id: crypto.randomUUID() }]);
-      }
-      setEditingPrompt(null); // Close the form after saving
+        if (promptToSave.id) {
+            setPrompts(prompts.map(p => (p.id === promptToSave.id ? promptToSave : p)));
+        } else {
+            setPrompts([...prompts, { ...promptToSave, id: crypto.randomUUID() }]);
+        }
+        setEditingPrompt(null);
     };
-    
+
     const handleDeletePrompt = (id: string) => {
-      if (window.confirm('Are you sure you want to delete this prompt?')) {
-        setPrompts(prompts.filter(p => p.id !== id));
-        setEditingPrompt(null); // Close the form after deleting
-      }
+        if (window.confirm('Are you sure you want to delete this prompt?')) {
+            setPrompts(prompts.filter(p => p.id !== id));
+            setEditingPrompt(null);
+        }
     };
+
     return (
         <div className="flex h-screen bg-gray-50 text-gray-800">
             <aside className="w-1/3 max-w-sm border-r border-gray-200 p-4 flex flex-col">
@@ -98,11 +112,15 @@ export default function HomePage() {
                     </button>
                 </div>
                 <div className="flex-grow overflow-y-auto mt-4">
-                  <PromptList
-                      prompts={prompts}
-                      onSelectPrompt={(p) => { /* Selection is now handled by the palette */ }}
-                      onEdit={setEditingPrompt}
-                  />
+                  {isClient ? (
+                    <PromptList
+                        prompts={prompts}
+                        onSelectPrompt={() => {}}
+                        onEdit={setEditingPrompt}
+                    />
+                  ) : (
+                    <p className="mt-4 text-center text-sm text-gray-500">Loading prompts...</p>
+                  )}
                 </div>
             </aside>
 
@@ -115,7 +133,7 @@ export default function HomePage() {
                     ref={textAreaRef}
                     value={mainText}
                     onChange={(e) => setMainText(e.target.value)}
-                    onSelect={handleSelectionChange} // Track selection
+                    onSelect={handleSelectionChange}
                     className="w-full flex-1 rounded-md border border-gray-300 p-4 text-base focus:border-blue-500 focus:ring-blue-500"
                     placeholder="Start writing..."
                 />
